@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bioseq-toolkit demo</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1d2321; --muted:#5d6763; --card:#ffffff; --line:#dfe3df; --accent:#2f7d5b; --accent-2:#b5532f; --code:#f1f3ef; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141816; --fg:#e6ebe8; --muted:#9aa5a0; --card:#1c211f; --line:#2c3330; --accent:#5cc093; --accent-2:#e58a64; --code:#232a27; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; } h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .tabs button { border:1px solid var(--line); background:var(--card); color:var(--fg); padding:7px 12px; border-radius:8px; cursor:pointer; font:inherit; }
+  .tabs button[aria-selected="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  textarea, input { width:100%; font:13px/1.4 ui-monospace, Menlo, Consolas, monospace; background:var(--code); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px; }
+  textarea { min-height: 120px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; align-items:center; }
+  .btn { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:8px 14px; cursor:pointer; font:inherit; }
+  .btn.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .btn:disabled { opacity:.5; cursor:wait; }
+  pre { background:var(--code); padding:10px; border-radius:8px; overflow:auto; font-size:12.5px; max-height:420px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; display:block; overflow-x:auto; }
+  th, td { border-bottom:1px solid var(--line); padding:5px 8px; text-align:left; white-space:nowrap; }
+  #status { color:var(--muted); font-size:13px; }
+  svg { width:100%; height:auto; }
+  .muted { color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>bioseq-toolkit</h1>
+  <p class="lead">The real Python package running in your browser through <a href="https://pyodide.org">Pyodide</a>. Nothing is uploaded. Source: <a href="https://github.com/liuweisu/bioseq-toolkit">github.com/liuweisu/bioseq-toolkit</a></p>
+  <p id="status">Loading Python (about 10 MB, first time only)…</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="te" aria-selected="true">Transposable elements</button>
+    <button role="tab" data-tab="asm">Assembly</button>
+    <button role="tab" data-tab="ori">Bacterial origin</button>
+    <button role="tab" data-tab="prot">Proteomics</button>
+  </div>
+
+  <section class="card" data-panel="te">
+    <h2>Find LTR retrotransposons and DNA transposons</h2>
+    <p class="muted">Paste a FASTA sequence or generate a simulated plant genome fragment with known elements.</p>
+    <textarea id="te-in" placeholder=">my_sequence&#10;ACGT..."></textarea>
+    <div class="row">
+      <button class="btn secondary" id="te-sim" disabled>Simulate plant fragment</button>
+      <button class="btn" id="te-run" disabled>Find elements</button>
+    </div>
+    <div id="te-out"></div>
+  </section>
+
+  <section class="card" data-panel="asm" hidden>
+    <h2>De Bruijn assembly</h2>
+    <p class="muted">Simulate reads from a random genome, then assemble them. Try different k values and see N50 change.</p>
+    <div class="row">
+      <label>Genome length <input id="asm-len" type="number" value="8000" style="width:110px"></label>
+      <label>Coverage <input id="asm-cov" type="number" value="25" style="width:80px"></label>
+      <label>Error rate <input id="asm-err" type="number" value="0.005" step="0.001" style="width:90px"></label>
+      <label>k <input id="asm-k" type="number" value="31" style="width:70px"></label>
+      <button class="btn" id="asm-run" disabled>Simulate &amp; assemble</button>
+    </div>
+    <div id="asm-out"></div>
+  </section>
+
+  <section class="card" data-panel="ori" hidden>
+    <h2>Origin of replication from GC skew</h2>
+    <p class="muted">The cumulative GC skew of a circular chromosome reaches its minimum at oriC and its maximum at the terminus.</p>
+    <textarea id="ori-in" placeholder=">chromosome&#10;ACGT..."></textarea>
+    <div class="row">
+      <button class="btn secondary" id="ori-sim" disabled>Simulate bacterial chromosome</button>
+      <button class="btn" id="ori-run" disabled>Predict origin</button>
+    </div>
+    <div id="ori-out"></div>
+  </section>
+
+  <section class="card" data-panel="prot" hidden>
+    <h2>Protein properties and tryptic digest</h2>
+    <input id="prot-in" value="MKWVTFISLLFLFSSAYSRGVFRRDTHKSEIAHRFKDLGEEHFKGLVLIAFSQYLQQCPFDEHVKLVNELTEFAKTCVADESHAGCEKSLHTLFGDELCKVASLRETYGDMADCCEKQEPERNECFLSHKDDSPDLPKLKPDPNTLCDEFKADEKKFWGKYLYEIARRHPYFYAPELLYYANKYNGVFQECCQAEDKGACLLPKIETMREKVLASSARQRLRCASIQKFGERALKAWSVARLSQKFPKAEFVEVTKLVTDLTKVHKECCHGDLLECADDRADLAKYICDNQDTISSKLKECCDKPLLEKSHCIAEVEKDAIPENLPPLTADFAEDKDVCKNYQEAKDAFLGSFLYEYSRRHPEYAVSVLLRLAKEYEATLEECCAKDDPHACYSTVFDKLKHLVDEPQNLIKQNCDQFEKLGEYGFQNALIVRYTRKVPQVSTPTLVEVSRSLGKVGTRCCTKPESERMPCTEDYLSLILNRLCVLHEKTPVSEKVTKCCTESLVNRRPCFSALTPDETYVPKAFDEKLFTFHADICTLPDTEKQIKKQTALVELLKHKPKATEEQLKTVMENFVAFVDKCCAADDKEACFAVEGPKLVVSTQTALA">
+    <p class="muted">Pre-filled with the bovine serum albumin precursor (UniProt P02769), a standard protein in proteomics labs.</p>
+    <div class="row"><button class="btn" id="prot-run" disabled>Analyse</button></div>
+    <div id="prot-out"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const MODULES = ["__init__", "seqio", "align", "assembly", "te", "bacteria", "proteomics", "variants", "simulate", "benchmark"];
+let py;
+const $ = (id) => document.getElementById(id);
+
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("[data-panel]").forEach((p) => p.hidden = p.dataset.panel !== b.dataset.tab);
+}));
+
+async function boot() {
+  py = await loadPyodide();
+  py.FS.mkdirTree("/home/pyodide/bioseq");
+  for (const m of MODULES) {
+    const src = await (await fetch(`py/bioseq/${m}.py`)).text();
+    py.FS.writeFile(`/home/pyodide/bioseq/${m}.py`, src);
+  }
+  await py.runPythonAsync(`
+import json, sys
+sys.path.insert(0, "/home/pyodide")
+from dataclasses import asdict
+from bioseq import seqio, assembly, te, bacteria, proteomics, simulate
+def first_seq(text):
+    recs = list(seqio.parse_fasta(text.splitlines())) if text.lstrip().startswith(">") else [seqio.Record("input", "".join(text.split()).upper())]
+    if not recs or not recs[0].seq:
+        raise ValueError("Paste a FASTA record or a raw sequence first")
+    return recs[0]
+`);
+  $("status").textContent = "Python is ready.";
+  document.querySelectorAll("button.btn").forEach((b) => b.disabled = false);
+}
+
+async function run(btn, code, render) {
+  btn.disabled = true; const old = btn.textContent; btn.textContent = "Running…";
+  await new Promise((r) => setTimeout(r, 30));
+  try { render(JSON.parse(await py.runPythonAsync(code))); }
+  catch (e) { alert(String(e).split("\n").filter(Boolean).slice(-1)[0]); }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+
+function table(rows) {
+  if (!rows.length) return "<p>No candidates found.</p>";
+  const cols = Object.keys(rows[0]);
+  return `<table><thead><tr>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${
+    rows.map((r) => `<tr>${cols.map((c) => `<td>${r[c] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function track(length, items, colorKey) {
+  const w = 900, h = 60;
+  const rects = items.map((it) => {
+    const x = (it.start / length) * w, width = Math.max(2, ((it.end - it.start) / length) * w);
+    const color = it[colorKey] === "LTR" ? "var(--accent)" : "var(--accent-2)";
+    return `<rect x="${x}" y="18" width="${width}" height="24" fill="${color}" rx="2"><title>${it[colorKey]} ${it.start}-${it.end}</title></rect>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="element positions"><line x1="0" x2="${w}" y1="30" y2="30" stroke="var(--line)" stroke-width="2"/>${rects}
+  <text x="0" y="58" font-size="11" fill="var(--muted)">0</text><text x="${w}" y="58" font-size="11" fill="var(--muted)" text-anchor="end">${length.toLocaleString()} bp</text></svg>
+  <p class="muted"><span style="color:var(--accent)">■</span> LTR retrotransposon &nbsp; <span style="color:var(--accent-2)">■</span> TIR transposon</p>`;
+}
+
+$("te-sim").onclick = () => run($("te-sim"), `
+g = simulate.plant_genome_with_tes(length=40000, seed=7)
+json.dumps({"fasta": seqio.format_fasta([seqio.Record("plant_fragment_sim", g.sequence)]), "n": len(g.truth)})
+`, (r) => { $("te-in").value = r.fasta; $("te-out").innerHTML = `<p class="muted">Simulated ${r.n} elements. Now press “Find elements”.</p>`; });
+
+$("te-run").onclick = () => { py.globals.set("TEXT", $("te-in").value); run($("te-run"), `
+rec = first_seq(TEXT)
+rows = []
+for c in te.find_ltr_retrotransposons(rec.seq):
+    rows.append({"type": "LTR", "start": c.start, "end": c.end, "length": c.length, "repeat_len": c.ltr_length,
+                 "identity": c.identity, "tsd": c.tsd, "age_Myr": round(c.insertion_age() / 1e6, 2)})
+for c in te.find_tir_transposons(rec.seq):
+    rows.append({"type": "TIR", "start": c.start, "end": c.end, "length": c.length, "repeat_len": c.tir_length,
+                 "identity": c.identity, "tsd": c.tsd, "age_Myr": ""})
+rows.sort(key=lambda r: r["start"])
+mask = te.kmer_repeat_mask(rec.seq)
+json.dumps({"rows": rows, "length": len(rec.seq), "repeat": round(mask.repeat_fraction, 3)})
+`, (r) => { $("te-out").innerHTML = track(r.length, r.rows, "type") +
+  `<p>${r.rows.length} candidates. ${(r.repeat * 100).toFixed(1)}% of the sequence is made of high-copy k-mers.</p>` + table(r.rows); }); };
+
+$("asm-run").onclick = () => {
+  py.globals.set("P", py.toPy({len: +$("asm-len").value, cov: +$("asm-cov").value, err: +$("asm-err").value, k: +$("asm-k").value}));
+  run($("asm-run"), `
+p = P.to_py() if hasattr(P, "to_py") else P
+if p["len"] > 30000: raise ValueError("Keep the genome at 30,000 bp or less in the browser")
+genome = assembly.random_genome(int(p["len"]), seed=1)
+reads = assembly.simulate_reads(genome, coverage=p["cov"], error_rate=p["err"], seed=1)
+counts = assembly.count_kmers([r.seq for r in reads], int(p["k"]))
+spectrum = assembly.kmer_spectrum(counts)
+contigs = assembly.assemble([r.seq for r in reads], k=int(p["k"]), min_count=3, min_length=100)
+stats = assembly.assembly_stats([c.seq for c in contigs], genome_size=len(genome))
+json.dumps({"reads": len(reads), "stats": stats.as_dict(), "spectrum": [[k, v] for k, v in spectrum.items() if k <= 80],
+            "contigs": [len(c) for c in contigs][:20]})
+`, (r) => {
+    const max = Math.max(...r.spectrum.map((x) => x[1]).slice(2), 1), w = 900, h = 160;
+    const bars = r.spectrum.map(([m, n]) => `<rect x="${(m / 80) * w}" y="${h - Math.min(1, n / max) * (h - 10)}" width="${w / 85}" height="${Math.min(1, n / max) * (h - 10)}" fill="${m < 4 ? "var(--accent-2)" : "var(--accent)"}"><title>${n} k-mers seen ${m}x</title></rect>`).join("");
+    $("asm-out").innerHTML = `<p>${r.reads.toLocaleString()} reads → <b>${r.stats.n_contigs}</b> contigs ≥100 bp, N50 <b>${r.stats.n50.toLocaleString()}</b> bp, largest ${r.stats.largest.toLocaleString()} bp, NG50 ${r.stats.ng50.toLocaleString()} bp.</p>
+    <p class="muted">k-mer spectrum (y axis clipped): error k-mers on the left in orange, genomic k-mers form the peak.</p>
+    <svg viewBox="0 0 ${w} ${h + 16}">${bars}<text x="0" y="${h + 14}" font-size="11" fill="var(--muted)">1x</text><text x="${w}" y="${h + 14}" font-size="11" text-anchor="end" fill="var(--muted)">80x</text></svg>
+    <pre>${JSON.stringify(r.stats, null, 2)}</pre>`;
+  });
+};
+
+$("ori-sim").onclick = () => run($("ori-sim"), `
+b = simulate.bacterial_genome(length=80000, ori=25000, seed=3)
+json.dumps({"fasta": seqio.format_fasta([seqio.Record("bacterium_sim", b.sequence, "true oriC=25000")])})
+`, (r) => { $("ori-in").value = r.fasta; });
+
+$("ori-run").onclick = () => { py.globals.set("TEXT", $("ori-in").value); run($("ori-run"), `
+rec = first_seq(TEXT)
+pred = bacteria.predict_ori(rec.seq)
+skew = bacteria.cumulative_skew(rec.seq)
+step = max(1, len(skew) // 600)
+orfs = bacteria.find_orfs(rec.seq)
+json.dumps({"pred": asdict(pred), "enrichment": round(pred.enrichment, 1), "skew": skew[::step], "step": step,
+            "length": len(rec.seq), "orfs": len(orfs), "density": round(bacteria.coding_density(orfs, len(rec.seq)), 3)})
+`, (r) => {
+  const w = 900, h = 220, lo = Math.min(...r.skew), hi = Math.max(...r.skew);
+  const pts = r.skew.map((v, i) => `${(i / (r.skew.length - 1)) * w},${h - ((v - lo) / (hi - lo || 1)) * (h - 20) - 10}`).join(" ");
+  const x = (pos) => (pos / r.length) * w;
+  $("ori-out").innerHTML = `<svg viewBox="0 0 ${w} ${h + 18}"><polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts}"/>
+    <line x1="${x(r.pred.ori)}" x2="${x(r.pred.ori)}" y1="0" y2="${h}" stroke="var(--accent-2)" stroke-dasharray="4"/><text x="${x(r.pred.ori) + 4}" y="14" font-size="12" fill="var(--accent-2)">oriC ${r.pred.ori.toLocaleString()}</text>
+    <line x1="${x(r.pred.ter)}" x2="${x(r.pred.ter)}" y1="0" y2="${h}" stroke="var(--muted)" stroke-dasharray="4"/><text x="${x(r.pred.ter) + 4}" y="14" font-size="12" fill="var(--muted)">ter ${r.pred.ter.toLocaleString()}</text>
+    <text x="0" y="${h + 16}" font-size="11" fill="var(--muted)">cumulative GC skew along the chromosome</text></svg>
+    <p>Predicted oriC at <b>${r.pred.ori.toLocaleString()}</b>, terminus at <b>${r.pred.ter.toLocaleString()}</b>. DnaA boxes near the origin: ${r.pred.dnaa_boxes_near_ori} (${r.enrichment}× the genome average). ${r.orfs} ORFs ≥100 aa, coding density ${(r.density * 100).toFixed(0)}%.</p>`;
+}); };
+
+$("prot-run").onclick = () => { py.globals.set("SEQ", $("prot-in").value.trim()); run($("prot-run"), `
+seq = "".join(SEQ.split()).upper()
+peps = proteomics.digest(seq, missed_cleavages=0)
+json.dumps({"len": len(seq), "mw": round(proteomics.molecular_weight(seq), 1), "pi": proteomics.isoelectric_point(seq),
+            "gravy": proteomics.gravy(seq),
+            "peps": [{"peptide": p.sequence, "start": p.start + 1, "[M+H]+": round(p.mh, 4)} for p in peps]})
+`, (r) => { $("prot-out").innerHTML = `<p>${r.len} residues · MW <b>${(r.mw / 1000).toFixed(2)} kDa</b> · pI <b>${r.pi}</b> · GRAVY <b>${r.gravy}</b></p>
+  <p class="muted">${r.peps.length} tryptic peptides (6-50 aa, carbamidomethyl-Cys, no missed cleavages):</p>` + table(r.peps); }); };
+
+boot().catch((e) => { $("status").textContent = "Could not load Python: " + e; });
+</script>
+</body>
+</html>
