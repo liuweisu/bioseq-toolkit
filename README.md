@@ -3,6 +3,8 @@
 [![CI](https://github.com/liuweisu/bioseq-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/liuweisu/bioseq-toolkit/actions/workflows/ci.yml)
 **[Live demo in the browser](https://liuweisu.github.io/bioseq-toolkit/)**
 
+> **About this repository.** This is a showcase of work I did during my studies at Wageningen University & Research (WUR). The original research and course code lives on WUR's internal GitLab and is not public. The code here was rebuilt quickly with help from Claude, an AI assistant, to show the methods and results; it is not the original thesis or course code.
+
 Genome assembly, transposable element (TE) discovery, bacterial genomics and proteomics, written from scratch in plain Python with no dependencies.
 
 Real work should use the established tools (SPAdes, EDTA, EarlGrey, Prodigal, MaxQuant, ...). I wrote this to show that I understand what those tools do inside, and to test each method against data where the right answer is known.
